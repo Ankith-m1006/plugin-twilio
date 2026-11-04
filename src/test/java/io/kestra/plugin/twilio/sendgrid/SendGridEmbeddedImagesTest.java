@@ -1,0 +1,78 @@
+package io.kestra.plugin.twilio.sendgrid;
+
+import java.io.File;
+import java.net.URI;
+import java.nio.file.Files;
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
+
+import com.sendgrid.helpers.mail.objects.Attachments;
+
+import io.kestra.core.junit.annotations.KestraTest;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.runners.RunContext;
+import io.kestra.core.runners.RunContextFactory;
+
+import jakarta.inject.Inject;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
+
+@KestraTest
+class SendGridEmbeddedImagesTest {
+
+    @Inject
+    private RunContextFactory runContextFactory;
+
+    private URI putFile(RunContext runContext) throws Exception {
+        File file = File.createTempFile("logo", ".png");
+        Files.write(file.toPath(), new byte[] {1, 2, 3});
+        return runContext.storage().putFile(file);
+    }
+
+    private SendGridMailSend.Attachment attachment(URI uri, String contentId) {
+        var builder = SendGridMailSend.Attachment.builder()
+            .uri(Property.ofValue(uri.toString()))
+            .name(Property.ofValue("logo.png"))
+            .contentType(Property.ofValue("image/png"));
+        if (contentId != null) {
+            builder.contentId(Property.ofValue(contentId));
+        }
+        return builder.build();
+    }
+
+    @Test
+    void embeddedImagesAreInlineWithTheNameAsContentId() throws Exception {
+        RunContext runContext = runContextFactory.of();
+        URI uri = putFile(runContext);
+
+        List<Attachments> result = new SendGridMailSend().attachmentResources(List.of(attachment(uri, null)), runContext, true);
+
+        assertThat(result.get(0).getDisposition(), is("inline"));
+        assertThat(result.get(0).getContentId(), is("logo.png"));
+        assertThat(result.get(0).getFilename(), is("logo.png"));
+    }
+
+    @Test
+    void embeddedImagesUseTheGivenContentId() throws Exception {
+        RunContext runContext = runContextFactory.of();
+        URI uri = putFile(runContext);
+
+        List<Attachments> result = new SendGridMailSend().attachmentResources(List.of(attachment(uri, "company-logo")), runContext, true);
+
+        assertThat(result.get(0).getContentId(), is("company-logo"));
+    }
+
+    @Test
+    void regularAttachmentsHaveNoContentId() throws Exception {
+        RunContext runContext = runContextFactory.of();
+        URI uri = putFile(runContext);
+
+        List<Attachments> result = new SendGridMailSend().attachmentResources(List.of(attachment(uri, null)), runContext, false);
+
+        assertThat(result.get(0).getDisposition(), is("attachment"));
+        assertThat(result.get(0).getContentId(), is(nullValue()));
+    }
+}
