@@ -210,11 +210,7 @@ public class SendGridMailSend extends Task implements RunnableTask<SendGridMailS
         return Output.builder().body(body).headers(headers).statusCode(statusCode).build();
     }
 
-    /**
-     * Builds SendGrid attachments. Inline (embedded) images get the "inline" disposition and a
-     * Content-ID, which SendGrid requires for inline content and which the HTML body references as
-     * {@code <img src="cid:...">}. The Content-ID defaults to the attachment name.
-     */
+    // Inline images need a Content-ID (default: the name) so the HTML can reference them as cid:.
     List<Attachments> attachmentResources(List<Attachment> list, RunContext runContext, boolean inline) throws Exception {
         return list
             .stream()
@@ -223,13 +219,13 @@ public class SendGridMailSend extends Task implements RunnableTask<SendGridMailS
                 InputStream inputStream = runContext.storage()
                     .getFile(URI.create(runContext.render(attachment.getUri()).as(String.class).get()));
 
-                String name = runContext.render(attachment.getName()).as(String.class).get();
-                Attachments.Builder builder = new Attachments.Builder(name, inputStream)
+                var name = runContext.render(attachment.getName()).as(String.class).get();
+                var builder = new Attachments.Builder(name, inputStream)
                     .withType(runContext.render(attachment.getContentType()).as(String.class).get())
                     .withDisposition(inline ? "inline" : "attachment");
 
                 if (inline) {
-                    String contentId = attachment.getContentId() == null
+                    var contentId = attachment.getContentId() == null
                         ? name
                         : runContext.render(attachment.getContentId()).as(String.class).orElse(name);
                     builder.withContentId(contentId);

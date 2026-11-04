@@ -27,7 +27,7 @@ class SendGridEmbeddedImagesTest {
     private RunContextFactory runContextFactory;
 
     private URI putFile(RunContext runContext) throws Exception {
-        File file = File.createTempFile("logo", ".png");
+        var file = File.createTempFile("logo", ".png");
         Files.write(file.toPath(), new byte[] {1, 2, 3});
         return runContext.storage().putFile(file);
     }
@@ -45,10 +45,10 @@ class SendGridEmbeddedImagesTest {
 
     @Test
     void embeddedImagesAreInlineWithTheNameAsContentId() throws Exception {
-        RunContext runContext = runContextFactory.of();
-        URI uri = putFile(runContext);
+        var runContext = runContextFactory.of();
+        var uri = putFile(runContext);
 
-        List<Attachments> result = new SendGridMailSend().attachmentResources(List.of(attachment(uri, null)), runContext, true);
+        var result = new SendGridMailSend().attachmentResources(List.of(attachment(uri, null)), runContext, true);
 
         assertThat(result.get(0).getDisposition(), is("inline"));
         assertThat(result.get(0).getContentId(), is("logo.png"));
@@ -57,20 +57,20 @@ class SendGridEmbeddedImagesTest {
 
     @Test
     void embeddedImagesUseTheGivenContentId() throws Exception {
-        RunContext runContext = runContextFactory.of();
-        URI uri = putFile(runContext);
+        var runContext = runContextFactory.of();
+        var uri = putFile(runContext);
 
-        List<Attachments> result = new SendGridMailSend().attachmentResources(List.of(attachment(uri, "company-logo")), runContext, true);
+        var result = new SendGridMailSend().attachmentResources(List.of(attachment(uri, "company-logo")), runContext, true);
 
         assertThat(result.get(0).getContentId(), is("company-logo"));
     }
 
     @Test
     void regularAttachmentsHaveNoContentId() throws Exception {
-        RunContext runContext = runContextFactory.of();
-        URI uri = putFile(runContext);
+        var runContext = runContextFactory.of();
+        var uri = putFile(runContext);
 
-        List<Attachments> result = new SendGridMailSend().attachmentResources(List.of(attachment(uri, null)), runContext, false);
+        var result = new SendGridMailSend().attachmentResources(List.of(attachment(uri, null)), runContext, false);
 
         assertThat(result.get(0).getDisposition(), is("attachment"));
         assertThat(result.get(0).getContentId(), is(nullValue()));
