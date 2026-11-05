@@ -73,7 +73,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                 """
         ),
         @Example(
-            title = "Send an HTML email with an embedded logo, referenced as cid:<name>.",
+            title = "Send an HTML email with an embedded logo, referenced in the HTML as `cid:logo.png`.",
             full = true,
             code = """
                 id: newsletter
@@ -251,7 +251,7 @@ public class SendGridMailSend extends Task implements RunnableTask<SendGridMailS
                         .withDisposition(inline ? "inline" : "attachment");
 
                     if (inline) {
-                        builder.withContentId(runContext.render(attachment.getContentId()).as(String.class).orElse(name));
+                        builder.withContentId(runContext.render(attachment.getContentId()).as(String.class).filter(id -> !id.isBlank()).orElse(name));
                     }
 
                     return builder.build();

@@ -66,6 +66,16 @@ class SendGridEmbeddedImagesTest {
     }
 
     @Test
+    void blankContentIdFallsBackToTheName() throws Exception {
+        var runContext = runContextFactory.of();
+        var uri = putFile(runContext);
+
+        var result = new SendGridMailSend().attachmentResources(List.of(attachment(uri, " ")), runContext, true);
+
+        assertThat(result.getFirst().getContentId(), is("logo.png"));
+    }
+
+    @Test
     void regularAttachmentsHaveNoContentId() throws Exception {
         var runContext = runContextFactory.of();
         var uri = putFile(runContext);
