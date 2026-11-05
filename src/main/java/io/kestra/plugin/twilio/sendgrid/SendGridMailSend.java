@@ -1,6 +1,5 @@
 package io.kestra.plugin.twilio.sendgrid;
 
-import java.io.InputStream;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
@@ -72,6 +71,32 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                     subject: "Kestra workflow failed for the flow {{flow.id}} in the namespace {{flow.namespace}}"
                     htmlContent: "Failure alert for flow {{ flow.namespace }}.{{ flow.id }} with ID {{ execution.id }}"
                 """
+        ),
+        @Example(
+            title = "Send an HTML email with an embedded logo, referenced as cid:<name>.",
+            full = true,
+            code = """
+                id: newsletter
+                namespace: company.team
+
+                inputs:
+                  - id: logo
+                    type: FILE
+
+                tasks:
+                  - id: send_email
+                    type: io.kestra.plugin.twilio.sendgrid.SendGridMailSend
+                    from: hello@kestra.io
+                    to:
+                      - hello@kestra.io
+                    sendgridApiKey: "{{ secret('SENDGRID_API_KEY') }}"
+                    subject: "This week at Kestra"
+                    htmlContent: '<img src="cid:logo.png" alt="Kestra"><p>Here is what shipped this week.</p>'
+                    embeddedImages:
+                      - uri: "{{ inputs.logo }}"
+                        name: logo.png
+                        contentType: image/png
+                """
         )
     },
     aliases = "io.kestra.plugin.notifications.sendgrid.SendGridMailSend"
@@ -141,7 +166,10 @@ public class SendGridMailSend extends Task implements RunnableTask<SendGridMailS
 
     @Schema(
         title = "Inline embedded images",
-        description = "Images loaded from storage and attached with inline disposition for HTML content"
+        description = """
+            Images loaded from storage and attached with inline disposition for HTML content.
+            Reference each image in `htmlContent` as `<img src="cid:<name>">`, or set `contentId` to use another id.
+            """
     )
     @PluginProperty(group = "advanced")
     private List<Attachment> embeddedImages;
@@ -216,22 +244,18 @@ public class SendGridMailSend extends Task implements RunnableTask<SendGridMailS
             .stream()
             .map(throwFunction(attachment ->
             {
-                InputStream inputStream = runContext.storage()
-                    .getFile(URI.create(runContext.render(attachment.getUri()).as(String.class).get()));
+                try (var inputStream = runContext.storage().getFile(URI.create(runContext.render(attachment.getUri()).as(String.class).get()))) {
+                    var name = runContext.render(attachment.getName()).as(String.class).get();
+                    var builder = new Attachments.Builder(name, inputStream)
+                        .withType(runContext.render(attachment.getContentType()).as(String.class).get())
+                        .withDisposition(inline ? "inline" : "attachment");
 
-                var name = runContext.render(attachment.getName()).as(String.class).get();
-                var builder = new Attachments.Builder(name, inputStream)
-                    .withType(runContext.render(attachment.getContentType()).as(String.class).get())
-                    .withDisposition(inline ? "inline" : "attachment");
+                    if (inline) {
+                        builder.withContentId(runContext.render(attachment.getContentId()).as(String.class).orElse(name));
+                    }
 
-                if (inline) {
-                    var contentId = attachment.getContentId() == null
-                        ? name
-                        : runContext.render(attachment.getContentId()).as(String.class).orElse(name);
-                    builder.withContentId(contentId);
+                    return builder.build();
                 }
-
-                return builder.build();
             }))
             .collect(Collectors.toList());
     }
@@ -267,7 +291,10 @@ public class SendGridMailSend extends Task implements RunnableTask<SendGridMailS
 
         @Schema(
             title = "Content-ID for embedded images",
-            description = "Used only for `embeddedImages`: the id the HTML body references as `<img src=\"cid:...\">`. Defaults to the attachment name."
+            description = """
+                Used only for `embeddedImages`: the id the HTML body references as `<img src="cid:...">`.
+                Defaults to the attachment name.
+                """
         )
         @PluginProperty(group = "advanced")
         private Property<String> contentId;

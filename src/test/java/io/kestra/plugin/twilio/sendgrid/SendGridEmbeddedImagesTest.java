@@ -50,9 +50,9 @@ class SendGridEmbeddedImagesTest {
 
         var result = new SendGridMailSend().attachmentResources(List.of(attachment(uri, null)), runContext, true);
 
-        assertThat(result.get(0).getDisposition(), is("inline"));
-        assertThat(result.get(0).getContentId(), is("logo.png"));
-        assertThat(result.get(0).getFilename(), is("logo.png"));
+        assertThat(result.getFirst().getDisposition(), is("inline"));
+        assertThat(result.getFirst().getContentId(), is("logo.png"));
+        assertThat(result.getFirst().getFilename(), is("logo.png"));
     }
 
     @Test
@@ -62,7 +62,7 @@ class SendGridEmbeddedImagesTest {
 
         var result = new SendGridMailSend().attachmentResources(List.of(attachment(uri, "company-logo")), runContext, true);
 
-        assertThat(result.get(0).getContentId(), is("company-logo"));
+        assertThat(result.getFirst().getContentId(), is("company-logo"));
     }
 
     @Test
@@ -72,7 +72,7 @@ class SendGridEmbeddedImagesTest {
 
         var result = new SendGridMailSend().attachmentResources(List.of(attachment(uri, null)), runContext, false);
 
-        assertThat(result.get(0).getDisposition(), is("attachment"));
-        assertThat(result.get(0).getContentId(), is(nullValue()));
+        assertThat(result.getFirst().getDisposition(), is("attachment"));
+        assertThat(result.getFirst().getContentId(), is(nullValue()));
     }
 }
