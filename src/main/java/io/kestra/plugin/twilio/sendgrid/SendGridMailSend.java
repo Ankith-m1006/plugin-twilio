@@ -245,13 +245,13 @@ public class SendGridMailSend extends Task implements RunnableTask<SendGridMailS
             .map(throwFunction(attachment ->
             {
                 try (var inputStream = runContext.storage().getFile(URI.create(runContext.render(attachment.getUri()).as(String.class).get()))) {
-                    var name = runContext.render(attachment.getName()).as(String.class).get();
-                    var builder = new Attachments.Builder(name, inputStream)
+                    var rName = runContext.render(attachment.getName()).as(String.class).get();
+                    var builder = new Attachments.Builder(rName, inputStream)
                         .withType(runContext.render(attachment.getContentType()).as(String.class).get())
                         .withDisposition(inline ? "inline" : "attachment");
 
                     if (inline) {
-                        builder.withContentId(runContext.render(attachment.getContentId()).as(String.class).filter(id -> !id.isBlank()).orElse(name));
+                        builder.withContentId(runContext.render(attachment.getContentId()).as(String.class).filter(id -> !id.isBlank()).orElse(rName));
                     }
 
                     return builder.build();
